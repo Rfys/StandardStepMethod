@@ -124,83 +124,127 @@ class StandardStep():
         self.df['Yc Position'] = self.df['Base Depth'] + self.df['Critical Depth (Yc)']
 
 
+def Calc_NormalCriticalDepth(discharge = None, base_width = None, left_slope = None, right_slope = None, manning = None, slope = None):
+    print("            ***  Normal & Critical Depth - Water Profile Analysis  ***             ")
+    print("                      coded by: Arif Yunando S - 2017410211                        ")
+    print("  Applied Hydraulics - Civil Engineering Dept. - Parahyangan Catholic University   ")
+    print("-----------------------------------------------------------------------------------") 
+    if discharge == None:
+        discharge   = float(input("     Discharge Rate           : "))
+    else:
+        print("     Discharge Rate           : {}".format(discharge))
+
+    if base_width == None:
+        base_width  = float(input("     Channel Base Width       : "))
+    else:
+        print("     Channel Base Width       : {}".format(base_width))
+
+    if left_slope == None:
+        left_slope  = float(input("     Left Slope               : "))
+    else:
+        print("     Left Slope               : {}".format(left_slope))
+
+    if right_slope == None:
+        right_slope = float(input("     Right Slope              : "))
+    else:
+        print("     Right Slope              : {}".format(right_slope))
+
+    if manning == None:
+        manning     = float(input("     Manning Coefficient      : "))
+    else:
+        print("     Manning Coefficient      : {}".format(manning))
+
+    if slope == None:
+        slope       = float(input("     Channel Slope            : "))
+    else:
+        print("     Channel Slope            : {}".format(slope))
+    print("-----------------------------------------------------------------------------------") 
+    section = channel(0, base_width, left_slope, right_slope, manning, slope)
+    Yc, Yn = section.Yc(discharge), section.Yn(discharge)
+    print("     Normal Depth (Yn)        : {:.3f}".format(Yn))
+    print("     Critical Depth (Yc)      : {:.3f}".format(Yc))
+    print("-----------------------------------------------------------------------------------") 
+    return Yc, Yn
+
+
+
 def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, M1 = None, M2 = None, Boundary_Depth = None, Initial_x = None, delta_x = None, Final_x = None, BaseDepthAtBoundary = None, Direction = None):
     print("            ***  Standard Step Method - Water Profile Analysis  ***             ")
     print("                     coded by: Arif Yunando S - 2017410211                      ")
     print(" Applied Hydraulics - Civil Engineering Dept. - Parahyangan Catholic University ")
     print("--------------------------------------------------------------------------------")
     if Discharge == None:
-        Q   = float(input("Discharge Rate           : "))
+        Q   = float(input("     Discharge Rate           : "))
     else:
         Q = Discharge
-        print("Discharge Rate           : {}".format(Q))
+        print("     Discharge Rate           : {}".format(Q))
 
     if Slope == None:
-        S   = float(input("Channel Slope            : "))
+        S   = float(input("     Channel Slope            : "))
     else:
         S = Slope
-        print("Channel Slope            : {}".format(S))
+        print("     Channel Slope            : {}".format(S))
         
     if Base == None:
-        B   = float(input("Channel Base Width       : "))
+        B   = float(input("     Channel Base Width       : "))
     else:
         B = Base
-        print("Channel Base Width       : {}".format(B))
+        print("     Channel Base Width       : {}".format(B))
 
     if Manning == None:
-        n   = float(input("Manning Coefficient      : "))
+        n   = float(input("     Manning Coefficient      : "))
     else:
         n = Manning
-        print("Manning Coefficient      : {}".format(n))
+        print("     Manning Coefficient      : {}".format(n))
 
     if M1 == None:
-        m1  = float(input("Left Slope               : "))
+        m1  = float(input("     Left Slope               : "))
     else:
         m1 = M1
-        print("Left Slope               : {}".format(m1))    
+        print("     Left Slope               : {}".format(m1))    
 
     if M2 == None:
-        m2  = float(input("Right Slope              : "))
+        m2  = float(input("     Right Slope              : "))
     else:
         m2 = M2
-        print("Right Slope              : {}".format(m2))
+        print("     Right Slope              : {}".format(m2))
 
     if Boundary_Depth == None:
-        y   = float(input("Water Depth at Boundary  : "))
+        y   = float(input("     Water Depth at Boundary  : "))
     else:
         y = Boundary_Depth
-        print("Water Depth at Boundary  : {}".format(y))
+        print("     Water Depth at Boundary  : {}".format(y))
 
     if Initial_x == None:
-        x   = float(input("Initial X Position       : ")) 
+        x   = float(input("     Initial X Position       : ")) 
     else:
         x = Initial_x
-        print("Initial X Position       : {}".format(x)) 
+        print("     Initial X Position       : {}".format(x)) 
  
     if delta_x == None:
-        dx  = float(input("Delta X Position         : ")) 
+        dx  = float(input("     Delta X Position         : ")) 
     else:
         dx = delta_x
-        print("Delta X Position         : {}".format(dx))
+        print("     Delta X Position         : {}".format(dx))
  
     if Final_x == None:
-        x_f = float(input("Final X position         : ")) 
+        x_f = float(input("     Final X position         : ")) 
     else:
         x_f = Final_x
-        print("Final X position         : {}".format(x_f))
+        print("     Final X position         : {}".format(x_f))
          
     if BaseDepthAtBoundary == None:
-        base= float(input("Base Position at Boundary: ")) 
+        base= float(input("     Base Position at Boundary: ")) 
     else:
         base = BaseDepthAtBoundary
-        print("Base Position at Boundary: {}".format(base))
+        print("     Base Position at Boundary: {}".format(base))
  
     if Direction == None:    
-        dire = float(input("Direction [1 (Upstream)/-1 (Downstream)] : ")) 
+        dire = float(input("     Direction [1 (Upstream)/-1 (Downstream)] : ")) 
     else:
         dire = Direction
         string = "Upstream" if dire == 1 else "Downstream"
-        print("Direction                : {}".format(string))
+        print("     Direction                : {}".format(string))
     print("--------------------------------------------------------------------------------")
 
     channel_array = []
@@ -216,11 +260,12 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
     check.analyze(channel_array, y, base)
     return check.df
 
-def createPlot(df_hasil, fig_width = 15, fig_heigth = 5):
+def createPlot(result, fig_width = 15, fig_heigth = 5):
+    result = result if isinstance(result, list) else [result]
     plt.figure(figsize=(fig_width, fig_heigth), dpi=80)
-    df_hasil.set_index('X Position')['Base Depth'].plot(label = 'Base Depth', c='black')
-    df_hasil.set_index('X Position')['Y Position'].plot(label = 'Water Profile', c='navy')
-    df_hasil.set_index('X Position')['Yn Position'].plot(label = 'Yn Position', ls='-.', c='royalblue')
-    df_hasil.set_index('X Position')['Yc Position'].plot(label = 'Yc Position', ls='--', c='Crimson')
+    for index, df_hasil in enumerate(result, start=1):
+        df_hasil.set_index('X Position')['Base Depth'].plot(label = 'Base Depth', c='black')
+        df_hasil.set_index('X Position')['Y Position'].plot(label = 'Water Profile {}'.format('#' + str(index)), c='navy')
+        df_hasil.set_index('X Position')['Yn Position'].plot(label = 'Yn Position {}'.format('#' + str(index)), ls='-.', c='royalblue')
+        df_hasil.set_index('X Position')['Yc Position'].plot(label = 'Yc Position {}'.format('#' + str(index)), ls='--', c='Crimson')
     plt.legend()
-    plt.show()
