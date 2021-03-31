@@ -265,9 +265,9 @@ def createPlot(result, fig_width = 15, fig_heigth = 5):
     result = result if isinstance(result, list) else [result]
     plt.figure(figsize=(fig_width, fig_heigth), dpi=400)
     result[0].set_index('X Position')['Base Depth'].plot(label = 'Base Depth', c='black')
-    result[0].set_index('X Position')['Y Position'].plot(label = 'Water Profile #1', c='navy')
     result[0].set_index('X Position')['Yn Position'].plot(label = 'Yn Profile', ls='-.', c='royalblue')
     result[0].set_index('X Position')['Yc Position'].plot(label = 'Yc Profile', ls='--', c='Crimson')
+    result[0].set_index('X Position')['Y Position'].plot(label = 'Water Profile #1', c='navy')
     if len(result) > 1:
         for index, df_hasil in enumerate(result[1:], start=2):
             df_hasil.set_index('X Position')['Base Depth' ].plot(c='black', label='')
