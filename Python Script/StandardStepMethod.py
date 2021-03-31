@@ -168,7 +168,7 @@ def Calc_NormalCriticalDepth(discharge = None, base_width = None, left_slope = N
 
 
 
-def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, M1 = None, M2 = None, Boundary_Depth = None, Initial_x = None, delta_x = None, Final_x = None, BaseDepthAtBoundary = None, Direction = None):
+def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, M1 = None, M2 = None, Boundary_Depth = None, Initial_x = None, delta_x = None, Distance = None, BaseDepthAtBoundary = None, Direction = None):
     print("            ***  Standard Step Method - Water Profile Analysis  ***             ")
     print("                     coded by: Arif Yunando S - 2017410211                      ")
     print(" Applied Hydraulics - Civil Engineering Dept. - Parahyangan Catholic University ")
@@ -222,16 +222,16 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
         print("     Initial X Position       : {}".format(x)) 
  
     if delta_x == None:
-        dx  = float(input("     Delta X Position         : ")) 
+        dx  = float(input("     Delta X                  : ")) 
     else:
         dx = delta_x
-        print("     Delta X Position         : {}".format(dx))
+        print("     Delta X                  : {}".format(dx))
  
-    if Final_x == None:
-        x_f = float(input("     Final X position         : ")) 
+    if Distance == None:
+        x_f = float(input("     Distance                 : ")) 
     else:
-        x_f = Final_x
-        print("     Final X position         : {}".format(x_f))
+        x_f = Distance
+        print("     Distance                 : {}".format(x_f))
          
     if BaseDepthAtBoundary == None:
         base= float(input("     Base Position at Boundary: ")) 
@@ -248,7 +248,8 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
     print("--------------------------------------------------------------------------------")
 
     channel_array = []
-    for i in range(int((x_f - x)/dx)):
+    iteration = x_f/dx
+    for i in range(int(round(iteration, 0)) + 1):
         #(self, location, base_width, left_slope, right_slope, manning, slope)
         channel_array.append(channel(x, B, m1, m2, n, S))
         if dire == 1: 
@@ -262,10 +263,15 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
 
 def createPlot(result, fig_width = 15, fig_heigth = 5):
     result = result if isinstance(result, list) else [result]
-    plt.figure(figsize=(fig_width, fig_heigth), dpi=80)
-    for index, df_hasil in enumerate(result, start=1):
-        df_hasil.set_index('X Position')['Base Depth'].plot(label = 'Base Depth', c='black')
-        df_hasil.set_index('X Position')['Y Position'].plot(label = 'Water Profile {}'.format('#' + str(index)), c='navy')
-        df_hasil.set_index('X Position')['Yn Position'].plot(label = 'Yn Position {}'.format('#' + str(index)), ls='-.', c='royalblue')
-        df_hasil.set_index('X Position')['Yc Position'].plot(label = 'Yc Position {}'.format('#' + str(index)), ls='--', c='Crimson')
+    plt.figure(figsize=(fig_width, fig_heigth), dpi=400)
+    result[0].set_index('X Position')['Base Depth'].plot(label = 'Base Depth', c='black')
+    result[0].set_index('X Position')['Y Position'].plot(label = 'Water Profile #1', c='navy')
+    result[0].set_index('X Position')['Yn Position'].plot(label = 'Yn Profile', ls='-.', c='royalblue')
+    result[0].set_index('X Position')['Yc Position'].plot(label = 'Yc Profile', ls='--', c='Crimson')
+    if len(result) > 1:
+        for index, df_hasil in enumerate(result[1:], start=2):
+            df_hasil.set_index('X Position')['Base Depth' ].plot(c='black', label='')
+            df_hasil.set_index('X Position')['Y Position' ].plot(label = 'Water Profile {}'.format('#' + str(index)))
+            df_hasil.set_index('X Position')['Yn Position'].plot(c='royalblue', ls='-.', label='')
+            df_hasil.set_index('X Position')['Yc Position'].plot(c='Crimson'  , ls='--', label='')
     plt.legend()
