@@ -42,6 +42,11 @@ class channel():
     
     def area(self, y):
         return (self.B + y*((self.m1+self.m2)/2))*y
+    
+    def centroid(self, y): #measure from water surface
+        a = 3*self.B*y + (self.m1 + self.m2)*y**2
+        b = 6*self.B   + (self.m1 + self.m2)*y*3
+        return a/b
 
     def wetP(self, y):
         return self.B + y*np.sqrt(1+self.m1**2) + y*np.sqrt(1+self.m2**2)
@@ -49,12 +54,43 @@ class channel():
     def hydraulicRadius(self, y):
         return self.area(y)/self.wetP(y)
     
+    def froude(self, discharge):
+        g  = 9.81
+        yn = self.Yn(discharge)
+        return (discharge/self.area(yn))/np.sqrt(g*yn)
+    
+    def momentum(self, y, discharge):
+        g = 9.81
+        return self.area(y)*self.centroid(y) + discharge**2/(g*self.area(y))
+
+    def energy(self, y, discharge):
+        g = 9.81
+        return y + (discharge/self.area(y))**2/(2*g)
+
+    def delta_Momentum(self, y1, y2, discharge):
+        M1 = self.momentum(y1, discharge)
+        M2 = self.momentum(y2, discharge)
+        return abs(M1 - M2)
+    
+    def delta_Energy(self, y1, y2, discharge):
+        E1 = self.energy(y1, discharge)
+        E2 = self.energy(y2, discharge)
+        return abs(E1 - E2)
+
     def delta_Yn(self, y, discharge):
         return ((self.area(y)**(5/3))/(self.wetP(y)**(2/3))) - (discharge*self.n/(self.S0**(1/2)))
     
     def delta_Yc(self, y, discharge):
         g = 9.81
         return (g/discharge**2) - ((self.B + (self.m1 + self.m2)*y)/self.area(y)**3)
+    
+    def alternate(self, y, discharge):
+        x = 0.1*y if y > self.Yc(discharge) else 2*y
+        return Secant(self.delta_Energy, x, (1+np.exp(-10))*x, 0, 0.00001, 1000, y, discharge)
+    
+    def conjugate(self, y, discharge):
+        x = 0.1*y if y > self.Yc(discharge) else 2*y
+        return Secant(self.delta_Momentum, x, (1+np.exp(-10))*x, 0, 0.00001, 1000, y, discharge)
 
     def Yn(self, discharge):
         return Secant(self.delta_Yn, 1, 2, 0, 0.000001, 1000, discharge)
@@ -101,6 +137,8 @@ class StandardStep():
                 "Stream Depth (Y)"   : [y_bound],
                 "Normal Depth (Yn)"  : [channel_array[0].Yn(self.Q)],
                 "Critical Depth (Yc)": [channel_array[0].Yc(self.Q)],
+                "Conjugate Depth"    : [channel_array[0].conjugate(y_bound, self.Q)],
+                "Alternate Depth"    : [channel_array[0].alternate(y_bound, self.Q)],
                 "Base Depth"         : [y_base]
             }
         )
@@ -114,14 +152,23 @@ class StandardStep():
                 "Spesific Energy"    : self.total_head(y, channel),
                 "X Position"         : channel.x,
                 "Stream Depth (Y)"   : y,
-                "Normal Depth (Yn)"  : channel.Yn(self.Q),
                 "Critical Depth (Yc)": channel.Yc(self.Q),
-                "Base Depth"         : -target_dx*channel.S0 + self.df.iloc[-1, -1]
+                "Normal Depth (Yn)"  : channel.Yn(self.Q),
+                "Alternate Depth"    : channel.alternate(y, self.Q),
+                "Conjugate Depth"    : channel.conjugate(y, self.Q),
+                "Base Depth"         : - target_dx*channel.S0 + self.df.iloc[-1, -1]
             }
             self.df = self.df.append(new_state, ignore_index=True)
-        self.df['Y Position']  = self.df['Base Depth'] + self.df['Stream Depth (Y)']
-        self.df['Yn Position'] = self.df['Base Depth'] + self.df['Normal Depth (Yn)']
-        self.df['Yc Position'] = self.df['Base Depth'] + self.df['Critical Depth (Yc)']
+        self.df['Y Position'        ] = self.df['Base Depth'] + self.df['Stream Depth (Y)'   ]
+        self.df['Yc Position'       ] = self.df['Base Depth'] + self.df['Critical Depth (Yc)']
+        self.df['Yn Position'       ] = self.df['Base Depth'] + self.df['Normal Depth (Yn)'  ]
+        self.df['Alternate Position'] = self.df['Base Depth'] + self.df['Alternate Depth'    ]
+        self.df['Conjugate Position'] = self.df['Base Depth'] + self.df['Conjugate Depth'    ]
+
+
+"""
+Wrapper Functions :)
+"""
 
 
 def Calc_NormalCriticalDepth(discharge = None, base_width = None, left_slope = None, right_slope = None, manning = None, slope = None):
@@ -130,12 +177,12 @@ def Calc_NormalCriticalDepth(discharge = None, base_width = None, left_slope = N
     print("  Applied Hydraulics - Civil Engineering Dept. - Parahyangan Catholic University   ")
     print("-----------------------------------------------------------------------------------")
     script = [
-        "     Discharge Rate           : ",
-        "     Channel Base Width       : ",
-        "     Left Slope               : ",
-        "     Right Slope              : ",
-        "     Manning Coefficient      : ",
-        "     Channel Slope            : "
+        "     Discharge Rate           :",
+        "     Channel Base Width       :",
+        "     Left Slope               :",
+        "     Right Slope              :",
+        "     Manning Coefficient      :",
+        "     Channel Slope            :"
     ]
     discharge   = float(input(script[0])) if discharge   == None else discharge
     base_width  = float(input(script[1])) if base_width  == None else base_width 
@@ -151,9 +198,12 @@ def Calc_NormalCriticalDepth(discharge = None, base_width = None, left_slope = N
     print(script[5], slope)
     print("-----------------------------------------------------------------------------------") 
     section = channel(0, base_width, left_slope, right_slope, manning, slope)
-    Yc, Yn  = section.Yc(discharge), section.Yn(discharge)
-    print("     Normal Depth (Yn)        : {:.3f}".format(Yn))
+    Yc, Yn, Fr  = section.Yc(discharge), section.Yn(discharge), section.froude(discharge)
+    jn_sal   = "Saluran Landai" if Fr < 1 else "Saluran Curam"
+    print("     Normal Depth   (Yn)      : {:.3f}".format(Yn))
     print("     Critical Depth (Yc)      : {:.3f}".format(Yc))
+    print("     Froude Number  (Fr)      : {:.3f}".format(Fr))
+    print("     Jenis Saluran            : {}".format(jn_sal))
     print("-----------------------------------------------------------------------------------") 
     return Yc, Yn
 
@@ -165,18 +215,18 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
     print(" Applied Hydraulics - Civil Engineering Dept. - Parahyangan Catholic University ")
     print("--------------------------------------------------------------------------------")
     script = [
-        "     Discharge Rate           : ",
-        "     Channel Slope            : ",
-        "     Channel Base Width       : ",
-        "     Manning Coefficient      : ",
-        "     Left Slope               : ",
-        "     Right Slope              : ",
-        "     Water Depth at Boundary  : ",
-        "     Initial X Position       : ",
-        "     Delta X                  : ",
-        "     Distance                 : ",
-        "     Base Position at Boundary: ",
-        "     Direction [1 (Upstream)/-1 (Downstream)] : "
+        "     Discharge Rate           :",
+        "     Channel Slope            :",
+        "     Channel Base Width       :",
+        "     Manning Coefficient      :",
+        "     Left Slope               :",
+        "     Right Slope              :",
+        "     Water Depth at Boundary  :",
+        "     Initial X Position       :",
+        "     Delta X                  :",
+        "     Distance                 :",
+        "     Base Position at Boundary:",
+        "     Direction [1 (Upstream)/-1 (Downstream)] :"
     ]
     Slope               = float(input(script[1]))  if Slope               == None else Slope
     Discharge           = float(input(script[0]))  if Discharge           == None else Discharge
@@ -204,6 +254,14 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
     print(script[10],BaseDepthAtBoundary)
     print(script[11],string)
     print("--------------------------------------------------------------------------------")
+    section = channel(Initial_x, Base, M1, M2, Manning, Slope)
+    Yc, Yn, Fr  = section.Yc(Discharge), section.Yn(Discharge), section.froude(Discharge)
+    jn_sal   = "Saluran Landai" if Fr < 1 else "Saluran Curam"
+    print("     Normal Depth   (Yn)      : {:.3f}".format(Yn))
+    print("     Critical Depth (Yc)      : {:.3f}".format(Yc))
+    print("     Froude Number  (Fr)      : {:.3f}".format(Fr))
+    print("     Jenis Saluran            : {}".format(jn_sal))
+    print("-----------------------------------------------------------------------------------") 
 
     channel_array = []
     iteration = Distance/delta_x
@@ -229,3 +287,9 @@ def createPlot(result, fig_width = 15, fig_heigth = 5):
             df_hasil.set_index('X Position')['Yc Position'].plot(c='Crimson',   label='', ls='--')
             df_hasil.set_index('X Position')['Y Position' ].plot(label = 'Water Profile {}'.format('#' + str(index)))
     plt.legend()
+
+def conjugatePlot(result):
+    result.set_index('X Position')['Conjugate Position'].plot(label = 'Conjugate', c='grey', ls = ':')
+
+def alternatePlot(result):
+    result.set_index('X Position')['Alternate Position'].plot(label = 'Alternate', c='red',  ls = ':')
