@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from numpy.polynomial import polynomial as poly
 
 def Secant(f, x0, x1, target = 0, eps = 0.0001, maxiter = 1000, *args):
 #  print("   ***  Numerical Analysis - Secant Method  ***   ")
@@ -89,7 +90,7 @@ class channel():
         return Secant(self.delta_Energy, x, (1+np.exp(-10))*x, 0, 0.00001, 1000, y, discharge)
     
     def conjugate(self, y, discharge):
-        x = 0.1*y if y > self.Yc(discharge) else 2*y
+        x = 0.1*y if y > self.Yc(discharge) else 2*self.Yc(discharge)
         return Secant(self.delta_Momentum, x, (1+np.exp(-10))*x, 0, 0.00001, 1000, y, discharge)
 
     def Yn(self, discharge):
@@ -273,19 +274,48 @@ def uniformChannel(Discharge = None, Slope = None, Base = None, Manning = None, 
     check.analyze(channel_array, Boundary_Depth, BaseDepthAtBoundary)
     return check.df
 
+def checkHydraulicJump(Upstream, Downstream):
+    df1 = Upstream[Upstream['Conjugate Depth'] > 0]
+    df1 = df1[df1['Normal Depth (Yn)'] > 0]
+    df2 = Downstream[Downstream['Conjugate Depth'] > 0]
+    df2 = df2[df2['Normal Depth (Yn)'] > 0]
+    x1 = df1['X Position'].tolist()
+    y1 = df1['Y Position'].tolist()
+    x2 = df2['X Position'].tolist()
+    y2 = df2['Y Position'].tolist()
+    y3 = df2['Conjugate Position'].tolist()
+    coef1 = poly.polyfit(x1, y1, 10)
+    coef2 = poly.polyfit(x2, y2, 10)
+    coef3 = poly.polyfit(x2, y3, 10)
+    p1 = poly.Polynomial(coef1)
+    p2 = poly.Polynomial(coef2)
+    p3 = poly.Polynomial(coef3)
+    def delta(x):
+        return p1(x) - p3(x)
+    xJump = Secant(delta, 1, 2)
+    print("               ***  Hydraulic Jump - Water Profile Analysis  ***                ")
+    print("                     coded by: Arif Yunando S - 2017410211                      ")
+    print(" Applied Hydraulics - Civil Engineering Dept. - Parahyangan Catholic University ")
+    print("--------------------------------------------------------------------------------")
+    print("                  Loncat Air terjadi pada posisi X = {:.3f}".format(xJump))
+    df = Upstream[Upstream['X Position'] < xJump].append(Downstream[Downstream['X Position'] > xJump], ignore_index=True)
+    return df
+
 def createPlot(result, fig_width = 15, fig_heigth = 5):
     result = result if isinstance(result, list) else [result]
-    plt.figure(figsize=(fig_width, fig_heigth), dpi=400)
-    result[0].set_index('X Position')['Base Depth' ].plot(label = 'Base Depth',       c='black')
-    result[0].set_index('X Position')['Yn Position'].plot(label = 'Yn Profile',       c='royalblue', ls='-.')
-    result[0].set_index('X Position')['Yc Position'].plot(label = 'Yc Profile',       c='Crimson',   ls='--')
-    result[0].set_index('X Position')['Y Position' ].plot(label = 'Water Profile #1', c='navy')
+    plt.figure(figsize=(fig_width, fig_heigth), dpi=200)
+    df = result[0].set_index('X Position').sort_index()
+    df['Base Depth' ].plot(label = 'Base Depth',       c='black')
+    df['Yn Position'].plot(label = 'Yn Profile',       c='royalblue', ls='-.')
+    df['Yc Position'].plot(label = 'Yc Profile',       c='Crimson',   ls='--')
+    df['Y Position' ].plot(label = 'Water Profile #1', c='navy')
     if len(result) > 1:
         for index, df_hasil in enumerate(result[1:], start=2):
-            df_hasil.set_index('X Position')['Base Depth' ].plot(c='black',     label='')
-            df_hasil.set_index('X Position')['Yn Position'].plot(c='royalblue', label='', ls='-.')
-            df_hasil.set_index('X Position')['Yc Position'].plot(c='Crimson',   label='', ls='--')
-            df_hasil.set_index('X Position')['Y Position' ].plot(label = 'Water Profile {}'.format('#' + str(index)))
+            df = df_hasil.set_index('X Position').sort_index()
+            df['Base Depth' ].plot(c='black',     label='')
+            df['Yn Position'].plot(c='royalblue', label='', ls='-.')
+            df['Yc Position'].plot(c='Crimson',   label='', ls='--')
+            df['Y Position' ].plot(label = 'Water Profile {}'.format('#' + str(index)))
     plt.legend()
 
 def conjugatePlot(result):
